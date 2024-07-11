@@ -24,4 +24,5 @@ dist-ssr
 *.sw?
 
 # WASM
-src/lib/*.out*
+src/lib/a.out.js
+src/lib/a.out.wasm

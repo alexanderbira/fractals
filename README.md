@@ -3,14 +3,15 @@ An online viewer/generator for fractals using C → WASM for fast generation.
 
 This is very much a work in progress.
 
-## Getting Started
-1. Install [Emscripten](https://emscripten.org/docs/getting_started/downloads.html)
-2. Compile generate the WASM and JS modules
+## Building
+1. Install [Emscripten](https://emscripten.org/docs/getting_started/downloads.html) and add `emcc` to your `$PATH`
+2. Build the project
 ```shell
-$ cd src/lib
-$ <path/to/emsdk>/upstream/emscripten/emcc --bind test.c -s USE_SDL=2 -s USE_SDL_GFX=2 -s EXPORT_ES6
+$ npm run build
 ```
-3. Run vite (from the `fractals` directory)
-```bash
-$ npm run dev
-```
+
+## Developing
+**Prerequisite**: Install [Emscripten](https://emscripten.org/docs/getting_started/downloads.html) and add `emcc` to your `$PATH`
+
+- Start the Vite development server with `npm run dev`
+- Re-compile the lib to WASM with `npm run build-lib`

@@ -1,18 +1,12 @@
-// @ts-expect-error: auto-generated
-import initModule from './lib/a.out.js';
+import initModule from './lib/a.out';
 import {useEffect, useRef} from "react";
-
-
-
 
 function FractalCanvas() {
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
-
     useEffect(() => {
         initModule({
             canvas: canvasRef.current,
-            // @ts-expect-error: it exists
         }).then(Module => {
             console.log(Module)
         });
