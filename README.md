@@ -15,3 +15,4 @@ $ npm run build
 
 - Start the Vite development server with `npm run dev`
 - Re-compile the lib to WASM with `npm run build-lib`
+- Lib can be built directly with [CMake](https://cmake.org/download). Make sure you have [SDL2](https://github.com/libsdl-org/SDL/releases/latest) installed.
