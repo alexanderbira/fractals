@@ -26,3 +26,4 @@ dist-ssr
 # WASM
 src/lib/a.out.js
 src/lib/a.out.wasm
+src/lib/cmake-build-debug

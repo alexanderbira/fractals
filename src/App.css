@@ -40,3 +40,8 @@
 .read-the-docs {
   color: #888;
 }
+
+canvas {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}

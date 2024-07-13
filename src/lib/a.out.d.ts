@@ -13,6 +13,8 @@ declare namespace RuntimeExports {
     let HEAPU64: any;
 }
 interface WasmModule {
+  _redraw(_0: number, _1: number, _2: number): void;
+  _drawMandelbrotPixel(_0: number, _1: number): void;
   _main(_0: number, _1: number): number;
 }
 
