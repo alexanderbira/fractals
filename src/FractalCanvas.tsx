@@ -9,14 +9,7 @@ function FractalCanvas() {
             canvas: canvasRef.current,
         })
 
-        const csize = 1500;
-
-        for (let x = 0; x < csize; x ++) {
-            for (let y = 0; y < csize; y ++) {
-                module._drawMandelbrotPixel(x, y)
-            }
-            module._redraw(x, 0, x, csize)
-        }
+        module._renderMandelbrot()
     }
 
     return (
