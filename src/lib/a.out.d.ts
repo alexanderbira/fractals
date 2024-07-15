@@ -13,8 +13,8 @@ declare namespace RuntimeExports {
     let HEAPU64: any;
 }
 interface WasmModule {
-  _renderMandelbrot(): void;
-  _main(_0: number, _1: number): number;
+  _renderMandelbrot(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number, _6: number): void;
+  _initialiseCanvas(_0: number): void;
 }
 
 interface EmbindModule {

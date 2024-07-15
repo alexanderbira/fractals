@@ -1,5 +1,5 @@
 import initModule from './lib/a.out';
-import { useRef } from "react";
+import {useRef} from "react";
 
 function FractalCanvas() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -9,7 +9,19 @@ function FractalCanvas() {
             canvas: canvasRef.current,
         })
 
-        module._renderMandelbrot()
+        module._initialiseCanvas(1000)
+
+        console.time()
+        module._renderMandelbrot(
+            -2,
+            2,
+            4,
+            0,
+            0,
+            10,
+            100,
+        )
+        console.timeEnd()
     }
 
     return (

@@ -11,15 +11,7 @@
 #define ONE_THIRD 0.3333333333333333
 
 /// The width/height of the canvas.
-#define CANVAS_SIZE 1500
-
-const float borderLeft = -2;
-const float borderTop = 2;
-const float sideLength = 4;
-const float startRe = 0;
-const float startIm = 0;
-const float cutoff = 10;
-const int maxIterations = 100;
+uint16_t canvasSize;
 
 /// The window.
 SDL_Window *window;
@@ -48,7 +40,7 @@ void redraw(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2) {
   );
 
   // Update the new texture with the data from the pixels array
-  SDL_UpdateTexture(texture, NULL, pixels + (y1 * CANVAS_SIZE + x1) * 3, CANVAS_SIZE * 3);
+  SDL_UpdateTexture(texture, NULL, pixels + (y1 * canvasSize + x1) * 3, canvasSize * 3);
 
   SDL_Rect destRect = {.x = x1, .y = y1, .w = w, .h = h};
 
@@ -108,56 +100,98 @@ void hsl2rgb(float h, float s, float l, uint8_t *dest) {
 /// @param x The x-coordinate of the pixel.
 /// @param y The y-coordinate of the pixel.
 void writePixel(float h, float s, float l, uint16_t x, uint16_t y) {
-  int currPixel = 3 * (y * CANVAS_SIZE + x);
+  int currPixel = 3 * (y * canvasSize + x);
   hsl2rgb(h, s, l, &pixels[currPixel]);
 }
 
 /// Calculate the colour of a pixel in the mandelbrot set and update the pixels array.
-/// @param x
-/// @param y
-void calculateMandelbrotPixel(uint16_t x, uint16_t y) {
+/// @param x The pixel column (0 is the leftmost column).
+/// @param y The pixel row (0 is the topmost row).
+/// @param borderLeft The real number corresponding to the left border of the render box.
+/// @param borderTop The imaginary number corresponding to the top border of the render box.
+/// @param sideLength The render box's simulated side length.
+/// @param startRe Re(z_0)
+/// @param startIm Im(z_0)
+/// @param cutoff The distance from the origin at which a point should stop being iterated.
+/// @param maxIterations The maximum number of iterations of a point to consider.
+void calculateMandelbrotPixel(
+  uint16_t x,
+  uint16_t y,
+  float borderLeft,
+  float borderTop,
+  float sideLength,
+  float startRe,
+  float startIm,
+  float cutoff,
+  int maxIterations
+) {
+  const double scale = sideLength / canvasSize;
+
   double iterationRe = startRe;
   double iterationIm = startIm;
-  double cRe = borderLeft + ((x + 0.5) * (sideLength / CANVAS_SIZE));
-  double cIm = borderTop - ((y + 0.5) * (sideLength / CANVAS_SIZE));
+  double cRe = borderLeft + ((x + 0.5) * scale);
+  double cIm = borderTop - ((y + 0.5) * scale);
 
   int numIterations = 0;
 
+  double squareIterationRe = iterationRe * iterationRe;
+  double squareIterationIm = iterationIm * iterationIm;
+
   while (
-    (
-      (
-        iterationRe < cutoff &&
-        iterationRe > -cutoff
-      ) ||
-      (
-        iterationIm < cutoff &&
-        iterationIm > -cutoff
-      )
-    ) &&
+    squareIterationRe + squareIterationIm < cutoff &&
     numIterations < maxIterations
     ) {
     double temp = iterationRe;
-    iterationRe = iterationRe * iterationRe - iterationIm * iterationIm + cRe;
-    iterationIm = (temp + temp) * iterationIm + cIm;
+    iterationRe = squareIterationRe - squareIterationIm + cRe;
+    iterationIm = 2 * temp * iterationIm + cIm;
+
+    squareIterationRe = iterationRe * iterationRe;
+    squareIterationIm = iterationIm * iterationIm;
+
     numIterations++;
   }
 
   if (numIterations == maxIterations) {
     writePixel(0, 0, 0, x, y);
   } else {
-    float betterIterations =
-      ((float) numIterations) - log(log(sqrt(iterationRe * iterationRe + iterationIm * iterationIm))) / M_LN2;
+    float betterIterations = ((float) numIterations) -
+                             log(log(sqrt(squareIterationRe + squareIterationIm))) / M_LN2;
     writePixel((float) betterIterations / (float) maxIterations, 1, 0.5, x, y);
   }
 }
 
 /// Render the Mandelbrot set.
-__attribute__((unused)) void renderMandelbrot() {
-  for (uint16_t x = 0; x < CANVAS_SIZE; x++) {
-    for (uint16_t y = 0; y < CANVAS_SIZE; y++) {
-      calculateMandelbrotPixel(x, y);
+/// @param borderLeft The real number corresponding to the left border of the render box.
+/// @param borderTop The imaginary number corresponding to the top border of the render box.
+/// @param sideLength The render box's simulated side length.
+/// @param startRe Re(z_0)
+/// @param startIm Im(z_0)
+/// @param cutoff The distance from the origin at which a point should stop being iterated.
+/// @param maxIterations The maximum number of iterations of a point to consider.
+__attribute__((unused)) void renderMandelbrot(
+  float borderLeft,
+  float borderTop,
+  float sideLength,
+  float startRe,
+  float startIm,
+  float cutoff,
+  int maxIterations
+) {
+  for (uint16_t x = 0; x < canvasSize; x++) {
+    for (uint16_t y = 0; y < canvasSize; y++) {
+      calculateMandelbrotPixel(
+        x,
+        y,
+        borderLeft,
+        borderTop,
+        sideLength,
+        startRe,
+        startIm,
+        cutoff,
+        maxIterations
+      );
     }
-    redraw(x, 0, x, CANVAS_SIZE);
+    redraw(x, 0, x, canvasSize);
   }
 }
 
@@ -172,16 +206,20 @@ __attribute__((unused)) void cleanup(void) {
   SDL_Quit();
 }
 
-int main() {
+/// Initialise the window, renderer, and pixels array.
+/// @param canvasSize_ The width and height in pixels of the canvas.
+__attribute__((unused)) void initialiseCanvas(uint16_t canvasSize_) {
   SDL_Init(SDL_INIT_VIDEO);
+
+  canvasSize = canvasSize_;
 
   // Initialise the window, renderer, and texture
   window = SDL_CreateWindow(
     "Fractal Window",
     SDL_WINDOWPOS_UNDEFINED,
     SDL_WINDOWPOS_UNDEFINED,
-    CANVAS_SIZE,
-    CANVAS_SIZE,
+    canvasSize,
+    canvasSize,
     SDL_WINDOW_SHOWN
   );
   renderer = SDL_CreateRenderer(
@@ -191,5 +229,5 @@ int main() {
   );
 
   // Free up space for the pixels array
-  pixels = malloc(CANVAS_SIZE * CANVAS_SIZE * 3);
+  pixels = malloc(canvasSize * canvasSize * 3);
 }
