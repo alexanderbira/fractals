@@ -79,6 +79,7 @@ float hue2rgb(float p, float q, float t) {
 /// @param s The saturation value.
 /// @param l The luminance value.
 /// @param dest The destination byte array to write the 8-bit r, g, and b values.
+/// @cite https://github.com/CharlesStover/hsl2rgb-js
 void hsl2rgb(float h, float s, float l, uint8_t *dest) {
   if (s == 0) {
     dest[0] = 0;
@@ -86,10 +87,10 @@ void hsl2rgb(float h, float s, float l, uint8_t *dest) {
     dest[2] = 0;
     return;
   }
-  float q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  float q = l < 0.5 ? l * s + l : l + s - l * s;
   float p = 2 * l - q;
   dest[0] = hue2rgb(p, q, h + ONE_THIRD) * 255;
-  dest[1] = hue2rgb(p, q, h) * 255;
+  dest[1] = hue2rgb(p, q, h) * 255; // swap dest 1 and 2 for a more vibrant image
   dest[2] = hue2rgb(p, q, h - ONE_THIRD) * 255;
 }
 
@@ -117,12 +118,12 @@ void writePixel(float h, float s, float l, uint16_t x, uint16_t y) {
 void calculateMandelbrotPixel(
   uint16_t x,
   uint16_t y,
-  float borderLeft,
-  float borderTop,
-  float sideLength,
-  float startRe,
-  float startIm,
-  float cutoff,
+  double borderLeft,
+  double borderTop,
+  double sideLength,
+  double startRe,
+  double startIm,
+  double cutoff,
   int maxIterations
 ) {
   const double scale = sideLength / canvasSize;
@@ -154,10 +155,32 @@ void calculateMandelbrotPixel(
   if (numIterations == maxIterations) {
     writePixel(0, 0, 0, x, y);
   } else {
+    // Credit: https://www.linas.org/art-gallery/escape/escape.html
     float betterIterations = ((float) numIterations) -
                              log(log(sqrt(squareIterationRe + squareIterationIm))) / M_LN2;
     writePixel((float) betterIterations / (float) maxIterations, 1, 0.5, x, y);
   }
+}
+
+/// Save the currently rendered image to the filesystem.
+__attribute__((unused)) void saveImage() {
+  // Create a surface in which to save the pixel data
+  SDL_Surface *image = SDL_CreateRGBSurfaceWithFormat(
+    0,
+    canvasSize,
+    canvasSize,
+    24,
+    SDL_PIXELFORMAT_RGB24
+  );
+
+  // Copy the pixel data to the surface
+  memmove(image->pixels, pixels, canvasSize * canvasSize * 3);
+
+  // Save the image to the filesystem
+  SDL_SaveBMP(image, "image.bmp");
+
+  // Free the memory allocated for the image surface
+  SDL_FreeSurface(image);
 }
 
 /// Render the Mandelbrot set.
@@ -169,12 +192,12 @@ void calculateMandelbrotPixel(
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
 __attribute__((unused)) void renderMandelbrot(
-  float borderLeft,
-  float borderTop,
-  float sideLength,
-  float startRe,
-  float startIm,
-  float cutoff,
+  double borderLeft,
+  double borderTop,
+  double sideLength,
+  double startRe,
+  double startIm,
+  double cutoff,
   int maxIterations
 ) {
   for (uint16_t x = 0; x < canvasSize; x++) {
