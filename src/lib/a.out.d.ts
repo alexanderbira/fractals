@@ -185,7 +185,7 @@ declare class FSNode {
 }
 interface WasmModule {
   _saveImage(): void;
-  _renderMandelbrot(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number, _6: number): void;
+  _renderMandelbrot(_0: number, _1: number, _2: number, _3: number, _4: number, _5: number, _6: number, _7: number): void;
   _cleanup(): void;
   _initialiseCanvas(_0: number): void;
 }

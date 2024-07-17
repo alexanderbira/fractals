@@ -13,7 +13,7 @@ function FractalCanvas() {
         setModule(module_)
 
         // Initialise the canvas
-        module_._initialiseCanvas(1000)
+        module_._initialiseCanvas(1500)
 
         // Generate and render the fractal
         console.time()
@@ -26,6 +26,8 @@ function FractalCanvas() {
             0.88,
             10 ** 2,
             401,
+            // eslint-disable-next-line no-constant-condition
+            true ? 1 : 0,
         )
         // Default Mandelbrot set:
         // module_._renderMandelbrot(

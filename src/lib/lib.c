@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <math.h>
+#include <stdbool.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -89,8 +90,10 @@ void hsl2rgb(float h, float s, float l, uint8_t *dest) {
   }
   float q = l < 0.5 ? l * s + l : l + s - l * s;
   float p = 2 * l - q;
+
+  // Swap dest 1 and 2 for a more vibrant image
   dest[0] = hue2rgb(p, q, h + ONE_THIRD) * 255;
-  dest[1] = hue2rgb(p, q, h) * 255; // swap dest 1 and 2 for a more vibrant image
+  dest[1] = hue2rgb(p, q, h) * 255;
   dest[2] = hue2rgb(p, q, h - ONE_THIRD) * 255;
 }
 
@@ -191,6 +194,7 @@ __attribute__((unused)) void saveImage() {
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
+/// @param render Whether to display the calculated canvas on the screen.
 __attribute__((unused)) void renderMandelbrot(
   double borderLeft,
   double borderTop,
@@ -198,7 +202,8 @@ __attribute__((unused)) void renderMandelbrot(
   double startRe,
   double startIm,
   double cutoff,
-  int maxIterations
+  int maxIterations,
+  bool render
 ) {
   for (uint16_t x = 0; x < canvasSize; x++) {
     for (uint16_t y = 0; y < canvasSize; y++) {
@@ -214,7 +219,9 @@ __attribute__((unused)) void renderMandelbrot(
         maxIterations
       );
     }
-    redraw(x, 0, x, canvasSize);
+    if (render) {
+      redraw(x, 0, x, canvasSize);
+    }
   }
 }
 
