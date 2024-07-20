@@ -111,9 +111,9 @@ void writePixel(float h, float s, float l, uint16_t x, uint16_t y) {
 /// Calculate the colour of a pixel in the mandelbrot set and update the pixels array.
 /// @param x The pixel column (0 is the leftmost column).
 /// @param y The pixel row (0 is the topmost row).
-/// @param borderLeft The real number corresponding to the left border of the render box.
-/// @param borderTop The imaginary number corresponding to the top border of the render box.
-/// @param sideLength The render box's simulated side length.
+/// @param minRe The real number corresponding to the left border of the render box.
+/// @param maxIm The imaginary number corresponding to the top border of the render box.
+/// @param viewSize The render box's simulated side length.
 /// @param startRe Re(z_0)
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
@@ -121,20 +121,20 @@ void writePixel(float h, float s, float l, uint16_t x, uint16_t y) {
 void calculateMandelbrotPixel(
   uint16_t x,
   uint16_t y,
-  double borderLeft,
-  double borderTop,
-  double sideLength,
+  double minRe,
+  double maxIm,
+  double viewSize,
   double startRe,
   double startIm,
   double cutoff,
   int maxIterations
 ) {
-  const double scale = sideLength / canvasSize;
+  const double scale = viewSize / canvasSize;
 
   double iterationRe = startRe;
   double iterationIm = startIm;
-  double cRe = borderLeft + ((x + 0.5) * scale);
-  double cIm = borderTop - ((y + 0.5) * scale);
+  double cRe = minRe + ((x + 0.5) * scale);
+  double cIm = maxIm - ((y + 0.5) * scale);
 
   int numIterations = 0;
 
@@ -187,18 +187,18 @@ __attribute__((unused)) void saveImage() {
 }
 
 /// Generate a fractal and save it to the pixels array.
-/// @param borderLeft The real number corresponding to the left border of the render box.
-/// @param borderTop The imaginary number corresponding to the top border of the render box.
-/// @param sideLength The render box's simulated side length.
+/// @param minRe The real number corresponding to the left border of the render box.
+/// @param maxIm The imaginary number corresponding to the top border of the render box.
+/// @param viewSize The render box's simulated side length.
 /// @param startRe Re(z_0)
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
 /// @param render Whether to display the calculated canvas on the screen.
 void generateFractal(
-  double borderLeft,
-  double borderTop,
-  double sideLength,
+  double minRe,
+  double maxIm,
+  double viewSize,
   double startRe,
   double startIm,
   double cutoff,
@@ -210,9 +210,9 @@ void generateFractal(
       calculateMandelbrotPixel(
         x,
         y,
-        borderLeft,
-        borderTop,
-        sideLength,
+        minRe,
+        maxIm,
+        viewSize,
         startRe,
         startIm,
         cutoff,
@@ -226,26 +226,26 @@ void generateFractal(
 }
 
 /// Generate a fractal and display it to the canvas.
-/// @param borderLeft The real number corresponding to the left border of the render box.
-/// @param borderTop The imaginary number corresponding to the top border of the render box.
-/// @param sideLength The render box's simulated side length.
+/// @param minRe The real number corresponding to the left border of the render box.
+/// @param maxIm The imaginary number corresponding to the top border of the render box.
+/// @param viewSize The render box's simulated side length.
 /// @param startRe Re(z_0)
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
 __attribute__((unused)) void generateRenderFractal(
-  double borderLeft,
-  double borderTop,
-  double sideLength,
+  double minRe,
+  double maxIm,
+  double viewSize,
   double startRe,
   double startIm,
   double cutoff,
   int maxIterations
 ) {
   generateFractal(
-    borderLeft,
-    borderTop,
-    sideLength,
+    minRe,
+    maxIm,
+    viewSize,
     startRe,
     startIm,
     cutoff,
@@ -255,18 +255,18 @@ __attribute__((unused)) void generateRenderFractal(
 }
 
 /// Generate and save a fractal image without displaying it.
-/// @param borderLeft The real number corresponding to the left border of the render box.
-/// @param borderTop The imaginary number corresponding to the top border of the render box.
-/// @param sideLength The render box's simulated side length.
+/// @param minRe The real number corresponding to the left border of the render box.
+/// @param maxIm The imaginary number corresponding to the top border of the render box.
+/// @param viewSize The render box's simulated side length.
 /// @param startRe Re(z_0)
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
 /// @param canvasSize_ The width/height in pixels of the fractal to generate.
 __attribute__((unused)) void generateSaveFractal(
-  double borderLeft,
-  double borderTop,
-  double sideLength,
+  double minRe,
+  double maxIm,
+  double viewSize,
   double startRe,
   double startIm,
   double cutoff,
@@ -283,9 +283,9 @@ __attribute__((unused)) void generateSaveFractal(
 
   // Generate the new fractal without displaying it
   generateFractal(
-    borderLeft,
-    borderTop,
-    sideLength,
+    minRe,
+    maxIm,
+    viewSize,
     startRe,
     startIm,
     cutoff,
