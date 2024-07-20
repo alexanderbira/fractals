@@ -33,7 +33,7 @@ const FractalCanvas: FC<FractalProps> = ({
     setModule(module_)
 
     // Initialise the canvas
-    module_._initialiseCanvas(canvasSize)
+    module_._initialiseGraphics(canvasSize)
   }
 
   const renderFractal = () => {
@@ -41,7 +41,7 @@ const FractalCanvas: FC<FractalProps> = ({
 
     // Generate and render the fractal
     console.time()
-    module._renderMandelbrot(
+    module._generateRenderFractal(
       minRe,
       maxIm,
       viewSize,
@@ -49,7 +49,6 @@ const FractalCanvas: FC<FractalProps> = ({
       startIm,
       cutoff,
       maxIterations,
-      1, // render=true
     )
     console.timeEnd()
   }
@@ -72,17 +71,11 @@ const FractalCanvas: FC<FractalProps> = ({
   }
 
   const saveCanvasHighRes = async () => {
-    // Initialise a new module
-    const module_ = await initModule({
-      canvas: canvasRef.current,
-    })
+    if (!module) return
 
-    // Initialise a new canvas
-    module_._initialiseCanvas(canvasSize * 5)
-
-    // Generate the fractal
+    // Generate and save the fractal to the virtual filesystem
     console.time()
-    module_._renderMandelbrot(
+    module._generateSaveFractal(
       minRe,
       maxIm,
       viewSize,
@@ -90,15 +83,12 @@ const FractalCanvas: FC<FractalProps> = ({
       startIm,
       cutoff,
       maxIterations,
-      0, // render=false
+      canvasSize * 5,
     )
     console.timeEnd()
 
-    // Save the image in the virtual Emscripten file system
-    module_._saveImage()
-
     // Extract the image from the virtual file system and save it
-    const blob = new Blob([module_.FS.readFile("image.bmp")], {
+    const blob = new Blob([module.FS.readFile("image.bmp")], {
       type: "image/bmp",
     })
     const url = URL.createObjectURL(blob)
@@ -106,17 +96,6 @@ const FractalCanvas: FC<FractalProps> = ({
     a.href = url
     a.download = "fractal.bmp"
     a.click()
-
-    try {
-      // Clean up the memory allocated for the new module
-      // TODO: this does not run properly
-      module_._cleanup()
-    } finally {
-      // The module has been destroyed by the cleanup function
-      setModule(null)
-      // TODO: make the window separate from the pixels and renderer so as to not
-      //  have to destroy the window on a high-res save.
-    }
   }
 
   return (

@@ -186,7 +186,7 @@ __attribute__((unused)) void saveImage() {
   SDL_FreeSurface(image);
 }
 
-/// Render the Mandelbrot set.
+/// Generate a fractal and save it to the pixels array.
 /// @param borderLeft The real number corresponding to the left border of the render box.
 /// @param borderTop The imaginary number corresponding to the top border of the render box.
 /// @param sideLength The render box's simulated side length.
@@ -195,7 +195,7 @@ __attribute__((unused)) void saveImage() {
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
 /// @param render Whether to display the calculated canvas on the screen.
-__attribute__((unused)) void renderMandelbrot(
+void generateFractal(
   double borderLeft,
   double borderTop,
   double sideLength,
@@ -225,20 +225,88 @@ __attribute__((unused)) void renderMandelbrot(
   }
 }
 
-/// Free allocated memory and quit SDL.
-__attribute__((unused)) void cleanup(void) {
-  // Free the window, renderer, and pixels
-  SDL_DestroyWindow(window);
-  SDL_DestroyRenderer(renderer);
+/// Generate a fractal and display it to the canvas.
+/// @param borderLeft The real number corresponding to the left border of the render box.
+/// @param borderTop The imaginary number corresponding to the top border of the render box.
+/// @param sideLength The render box's simulated side length.
+/// @param startRe Re(z_0)
+/// @param startIm Im(z_0)
+/// @param cutoff The distance from the origin at which a point should stop being iterated.
+/// @param maxIterations The maximum number of iterations of a point to consider.
+__attribute__((unused)) void generateRenderFractal(
+  double borderLeft,
+  double borderTop,
+  double sideLength,
+  double startRe,
+  double startIm,
+  double cutoff,
+  int maxIterations
+) {
+  generateFractal(
+    borderLeft,
+    borderTop,
+    sideLength,
+    startRe,
+    startIm,
+    cutoff,
+    maxIterations,
+    true
+  );
+}
+
+/// Generate and save a fractal image without displaying it.
+/// @param borderLeft The real number corresponding to the left border of the render box.
+/// @param borderTop The imaginary number corresponding to the top border of the render box.
+/// @param sideLength The render box's simulated side length.
+/// @param startRe Re(z_0)
+/// @param startIm Im(z_0)
+/// @param cutoff The distance from the origin at which a point should stop being iterated.
+/// @param maxIterations The maximum number of iterations of a point to consider.
+/// @param canvasSize_ The width/height in pixels of the fractal to generate.
+__attribute__((unused)) void generateSaveFractal(
+  double borderLeft,
+  double borderTop,
+  double sideLength,
+  double startRe,
+  double startIm,
+  double cutoff,
+  int maxIterations,
+  uint16_t canvasSize_
+) {
+  // Save old global variables
+  uint16_t oldCanvasSize = canvasSize;
+  uint8_t *oldPixels = pixels;
+
+  // Assign new global variables
+  canvasSize = canvasSize_;
+  pixels = malloc(canvasSize * canvasSize * 3);
+
+  // Generate the new fractal without displaying it
+  generateFractal(
+    borderLeft,
+    borderTop,
+    sideLength,
+    startRe,
+    startIm,
+    cutoff,
+    maxIterations,
+    false
+  );
+
+  // Save the image
+  saveImage();
+
+  // Free the space allocated for the new pixels array
   free(pixels);
 
-  // Quit SDL
-  SDL_Quit();
+  // Restore the values of the global variables
+  canvasSize = oldCanvasSize;
+  pixels = oldPixels;
 }
 
 /// Initialise the window, renderer, and pixels array.
 /// @param canvasSize_ The width and height in pixels of the canvas.
-__attribute__((unused)) void initialiseCanvas(uint16_t canvasSize_) {
+__attribute__((unused)) void initialiseGraphics(uint16_t canvasSize_) {
   SDL_Init(SDL_INIT_VIDEO);
 
   canvasSize = canvasSize_;
@@ -258,6 +326,17 @@ __attribute__((unused)) void initialiseCanvas(uint16_t canvasSize_) {
     SDL_RENDERER_ACCELERATED
   );
 
-  // Free up space for the pixels array
+  // Allocate space for the pixels array
   pixels = malloc(canvasSize * canvasSize * 3);
+}
+
+/// Free allocated memory and quit SDL.
+__attribute__((unused)) void cleanup(void) {
+  // Free the window, renderer, and pixels
+  SDL_DestroyWindow(window);
+  SDL_DestroyRenderer(renderer);
+  free(pixels);
+
+  // Quit SDL
+  SDL_Quit();
 }
