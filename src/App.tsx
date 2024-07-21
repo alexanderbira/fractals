@@ -14,8 +14,15 @@ function App() {
   const canvasSize = 500
 
   return (
-    <div style={{ display: "flex", flexFlow: "row wrap", gap: "25px" }}>
-      <div>
+    <div
+      style={{
+        display: "flex",
+        flexFlow: "row wrap",
+        gap: "25px",
+        width: "100%",
+      }}
+    >
+      <div style={{ flexGrow: 1 }}>
         <p>minRe: {minRe}</p>
         <input
           type="range"
@@ -83,7 +90,9 @@ function App() {
       </div>
       <FractalCanvas
         minRe={minRe}
+        setMinRe={setMinRe}
         maxIm={maxIm}
+        setMaxIm={setMaxIm}
         viewSize={viewSize}
         startRe={startRe}
         startIm={startIm}

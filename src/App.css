@@ -1,5 +1,6 @@
 #root {
   max-width: 1280px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -45,4 +46,12 @@ canvas {
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   max-height: 90vh;
+}
+
+.grab {
+  cursor: grab !important;
+}
+
+.grabbing {
+  cursor: grabbing !important;
 }

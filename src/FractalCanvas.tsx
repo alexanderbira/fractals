@@ -1,9 +1,21 @@
 import initModule, { MainModule } from "./lib/a.out"
-import { Fragment, useRef, useState, FC, useEffect, useCallback } from "react"
+import {
+  Fragment,
+  useRef,
+  useState,
+  FC,
+  useEffect,
+  useCallback,
+  MouseEvent,
+  Dispatch,
+  SetStateAction,
+} from "react"
 
 interface FractalProps {
   minRe: number
+  setMinRe: Dispatch<SetStateAction<number>>
   maxIm: number
+  setMaxIm: Dispatch<SetStateAction<number>>
   viewSize: number
   startRe: number
   startIm: number
@@ -12,9 +24,28 @@ interface FractalProps {
   canvasSize: number
 }
 
+interface MousePos {
+  x: number
+  y: number
+}
+
+interface SavedState {
+  minRe: number
+  maxIm: number
+}
+
+const getMousePos = (e: MouseEvent): MousePos => {
+  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  return { x, y }
+}
+
 const FractalCanvas: FC<FractalProps> = ({
   minRe,
+  setMinRe,
   maxIm,
+  setMaxIm,
   viewSize,
   startRe,
   startIm,
@@ -23,6 +54,10 @@ const FractalCanvas: FC<FractalProps> = ({
   canvasSize,
 }) => {
   const [module, setModule] = useState<MainModule | null>(null)
+  const [mouseDown, setMouseDown] = useState<boolean>(false)
+  const [mousePos, setMousePos] = useState<MousePos | null>(null)
+  const [savedState, setSavedState] = useState<SavedState | null>(null)
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const initialise = useCallback(async () => {
@@ -96,7 +131,6 @@ const FractalCanvas: FC<FractalProps> = ({
   useEffect(() => {
     if (!module) return
 
-    console.time()
     module._generateRenderFractal(
       minRe,
       maxIm,
@@ -106,7 +140,6 @@ const FractalCanvas: FC<FractalProps> = ({
       cutoff,
       maxIterations,
     )
-    console.timeEnd()
   }, [minRe, maxIm, viewSize, startRe, startIm, cutoff, maxIterations, module])
 
   return (
@@ -120,7 +153,36 @@ const FractalCanvas: FC<FractalProps> = ({
         </Fragment>
       )}
       <br />
-      <canvas id="canvas" ref={canvasRef} />
+      <canvas
+        id="canvas"
+        className={mouseDown ? "grabbing" : "grab"}
+        ref={canvasRef}
+        onMouseDown={(e) => {
+          setMouseDown(true)
+          setMousePos(getMousePos(e))
+          setSavedState({
+            minRe,
+            maxIm,
+          })
+        }}
+        onMouseUp={() => setMouseDown(false)}
+        onMouseLeave={() => setMouseDown(false)}
+        onMouseMove={(e) => {
+          if (mouseDown) {
+            if (!mousePos) return
+            if (!savedState) return
+
+            const newMousePos = getMousePos(e)
+            const dx = newMousePos.x - mousePos.x
+            const dy = newMousePos.y - mousePos.y
+
+            const scaleFactor = viewSize / canvasSize
+
+            setMinRe(savedState.minRe - dx * scaleFactor)
+            setMaxIm(savedState.maxIm + dy * scaleFactor)
+          }
+        }}
+      />
     </div>
   )
 }
