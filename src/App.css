@@ -46,6 +46,7 @@ canvas {
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   max-height: 90vh;
+  touch-action: none;
 }
 
 .grab {

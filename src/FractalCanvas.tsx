@@ -7,6 +7,7 @@ import {
   useEffect,
   useCallback,
   MouseEvent,
+  TouchEvent,
   Dispatch,
   SetStateAction,
 } from "react"
@@ -34,10 +35,17 @@ interface SavedState {
   maxIm: number
 }
 
-const getMousePos = (e: MouseEvent): MousePos => {
+const getMousePosMouse = (e: MouseEvent<HTMLCanvasElement>): MousePos => {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
+  return { x, y }
+}
+
+const getMousePosTouch = (e: TouchEvent<HTMLCanvasElement>): MousePos => {
+  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+  const x = e.touches[0].clientX - rect.left
+  const y = e.touches[0].clientY - rect.top
   return { x, y }
 }
 
@@ -157,14 +165,23 @@ const FractalCanvas: FC<FractalProps> = ({
         id="canvas"
         className={mouseDown ? "grabbing" : "grab"}
         ref={canvasRef}
-        onMouseDown={(e) => {
+        onTouchStart={(e) => {
           setMouseDown(true)
-          setMousePos(getMousePos(e))
+          setMousePos(getMousePosTouch(e))
           setSavedState({
             minRe,
             maxIm,
           })
         }}
+        onMouseDown={(e) => {
+          setMouseDown(true)
+          setMousePos(getMousePosMouse(e))
+          setSavedState({
+            minRe,
+            maxIm,
+          })
+        }}
+        onTouchEnd={() => setMouseDown(false)}
         onMouseUp={() => setMouseDown(false)}
         onMouseLeave={() => setMouseDown(false)}
         onMouseMove={(e) => {
@@ -172,7 +189,23 @@ const FractalCanvas: FC<FractalProps> = ({
             if (!mousePos) return
             if (!savedState) return
 
-            const newMousePos = getMousePos(e)
+            const newMousePos = getMousePosMouse(e)
+            const dx = newMousePos.x - mousePos.x
+            const dy = newMousePos.y - mousePos.y
+
+            const scaleFactor = viewSize / canvasSize
+
+            setMinRe(savedState.minRe - dx * scaleFactor)
+            setMaxIm(savedState.maxIm + dy * scaleFactor)
+          }
+        }}
+        onTouchMove={(e) => {
+          e.preventDefault()
+          if (mouseDown) {
+            if (!mousePos) return
+            if (!savedState) return
+
+            const newMousePos = getMousePosTouch(e)
             const dx = newMousePos.x - mousePos.x
             const dy = newMousePos.y - mousePos.y
 
