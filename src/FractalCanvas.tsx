@@ -1,5 +1,5 @@
 import initModule, { MainModule } from "./lib/a.out"
-import { Fragment, useRef, useState, FC } from "react"
+import { Fragment, useRef, useState, FC, useEffect, useCallback } from "react"
 
 interface FractalProps {
   minRe: number
@@ -25,7 +25,7 @@ const FractalCanvas: FC<FractalProps> = ({
   const [module, setModule] = useState<MainModule | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const initialise = async () => {
+  const initialise = useCallback(async () => {
     // Initialise the module
     const module_ = await initModule({
       canvas: canvasRef.current,
@@ -34,26 +34,11 @@ const FractalCanvas: FC<FractalProps> = ({
 
     // Initialise the canvas
     module_._initialiseGraphics(canvasSize)
-  }
+    // The events which Emscripten adds to the window mess with React state management, so remove them.
+    module_.JSEvents.removeAllEventListeners()
+  }, [canvasSize])
 
-  const renderFractal = () => {
-    if (!module) return
-
-    // Generate and render the fractal
-    console.time()
-    module._generateRenderFractal(
-      minRe,
-      maxIm,
-      viewSize,
-      startRe,
-      startIm,
-      cutoff,
-      maxIterations,
-    )
-    console.timeEnd()
-  }
-
-  const saveCanvas = () => {
+  const saveCanvas = useCallback(() => {
     if (!module) return
 
     // Save the image in the virtual Emscripten file system
@@ -68,9 +53,9 @@ const FractalCanvas: FC<FractalProps> = ({
     a.href = url
     a.download = "fractal.bmp"
     a.click()
-  }
+  }, [module])
 
-  const saveCanvasHighRes = async () => {
+  const saveCanvasHighRes = useCallback(async () => {
     if (!module) return
 
     // Generate and save the fractal to the virtual filesystem
@@ -96,22 +81,47 @@ const FractalCanvas: FC<FractalProps> = ({
     a.href = url
     a.download = "fractal.bmp"
     a.click()
-  }
+  }, [
+    minRe,
+    maxIm,
+    viewSize,
+    startRe,
+    startIm,
+    cutoff,
+    maxIterations,
+    canvasSize,
+    module,
+  ])
+
+  useEffect(() => {
+    if (!module) return
+
+    console.time()
+    module._generateRenderFractal(
+      minRe,
+      maxIm,
+      viewSize,
+      startRe,
+      startIm,
+      cutoff,
+      maxIterations,
+    )
+    console.timeEnd()
+  }, [minRe, maxIm, viewSize, startRe, startIm, cutoff, maxIterations, module])
 
   return (
-    <>
+    <div>
       {!module ? (
         <button onClick={initialise}>Initialise</button>
       ) : (
         <Fragment>
-          <button onClick={renderFractal}>Render</button>
           <button onClick={saveCanvas}>Save</button>
           <button onClick={saveCanvasHighRes}>Save (Hi-Res)</button>
         </Fragment>
       )}
       <br />
       <canvas id="canvas" ref={canvasRef} />
-    </>
+    </div>
   )
 }
 
