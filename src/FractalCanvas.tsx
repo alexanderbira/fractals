@@ -1,4 +1,5 @@
 import initModule, { MainModule } from "./lib/a.out"
+
 import {
   Fragment,
   useRef,
@@ -6,8 +7,8 @@ import {
   FC,
   useEffect,
   useCallback,
-  MouseEvent,
   TouchEvent,
+  MouseEvent,
   Dispatch,
   SetStateAction,
 } from "react"
@@ -35,17 +36,28 @@ interface SavedState {
   maxIm: number
 }
 
-const getMousePosMouse = (e: MouseEvent<HTMLCanvasElement>): MousePos => {
-  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  return { x, y }
-}
+// Returns true iff the event passed into it was a React MouseEvent.
+const isMouseEvent = (
+  e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>,
+): e is MouseEvent<HTMLCanvasElement> =>
+  (e as MouseEvent<HTMLCanvasElement>).clientX !== undefined
 
-const getMousePosTouch = (e: TouchEvent<HTMLCanvasElement>): MousePos => {
+// Get the current mouse position relative to the target canvas element.
+const getMousePos = (
+  e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>,
+): MousePos => {
   const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
-  const x = e.touches[0].clientX - rect.left
-  const y = e.touches[0].clientY - rect.top
+  let x: number, y: number
+
+  if (isMouseEvent(e)) {
+    x = e.clientX - rect.left
+    y = e.clientY - rect.top
+  } else {
+    const touch = (e as TouchEvent<HTMLCanvasElement>).touches[0]
+    x = touch.clientX - rect.left
+    y = touch.clientY - rect.top
+  }
+
   return { x, y }
 }
 
@@ -77,7 +89,7 @@ const FractalCanvas: FC<FractalProps> = ({
 
     // Initialise the canvas
     module_._initialiseGraphics(canvasSize)
-    // The events which Emscripten adds to the window mess with React state management, so remove them.
+    // The events which Emscripten adds to the window mess with React state management, so remove them
     module_.JSEvents.removeAllEventListeners()
   }, [canvasSize])
 
@@ -136,6 +148,37 @@ const FractalCanvas: FC<FractalProps> = ({
     module,
   ])
 
+  const handleCanvasMove = useCallback(
+    (e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>) => {
+      if (mouseDown) {
+        if (!mousePos) return
+        if (!savedState) return
+
+        const newMousePos = getMousePos(e)
+        const dx = newMousePos.x - mousePos.x
+        const dy = newMousePos.y - mousePos.y
+
+        const scaleFactor = viewSize / canvasSize
+
+        setMinRe(savedState.minRe - dx * scaleFactor)
+        setMaxIm(savedState.maxIm + dy * scaleFactor)
+      }
+    },
+    [viewSize, canvasSize, setMaxIm, setMinRe, mouseDown, mousePos, savedState],
+  )
+
+  const handleStartCanvasMove = useCallback(
+    (e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>) => {
+      setMouseDown(true)
+      setMousePos(getMousePos(e))
+      setSavedState({
+        minRe,
+        maxIm,
+      })
+    },
+    [minRe, maxIm],
+  )
+
   useEffect(() => {
     if (!module) return
 
@@ -165,56 +208,13 @@ const FractalCanvas: FC<FractalProps> = ({
         id="canvas"
         className={mouseDown ? "grabbing" : "grab"}
         ref={canvasRef}
-        onTouchStart={(e) => {
-          setMouseDown(true)
-          setMousePos(getMousePosTouch(e))
-          setSavedState({
-            minRe,
-            maxIm,
-          })
-        }}
-        onMouseDown={(e) => {
-          setMouseDown(true)
-          setMousePos(getMousePosMouse(e))
-          setSavedState({
-            minRe,
-            maxIm,
-          })
-        }}
+        onTouchStart={handleStartCanvasMove}
+        onMouseDown={handleStartCanvasMove}
         onTouchEnd={() => setMouseDown(false)}
         onMouseUp={() => setMouseDown(false)}
         onMouseLeave={() => setMouseDown(false)}
-        onMouseMove={(e) => {
-          if (mouseDown) {
-            if (!mousePos) return
-            if (!savedState) return
-
-            const newMousePos = getMousePosMouse(e)
-            const dx = newMousePos.x - mousePos.x
-            const dy = newMousePos.y - mousePos.y
-
-            const scaleFactor = viewSize / canvasSize
-
-            setMinRe(savedState.minRe - dx * scaleFactor)
-            setMaxIm(savedState.maxIm + dy * scaleFactor)
-          }
-        }}
-        onTouchMove={(e) => {
-          e.preventDefault()
-          if (mouseDown) {
-            if (!mousePos) return
-            if (!savedState) return
-
-            const newMousePos = getMousePosTouch(e)
-            const dx = newMousePos.x - mousePos.x
-            const dy = newMousePos.y - mousePos.y
-
-            const scaleFactor = viewSize / canvasSize
-
-            setMinRe(savedState.minRe - dx * scaleFactor)
-            setMaxIm(savedState.maxIm + dy * scaleFactor)
-          }
-        }}
+        onMouseMove={handleCanvasMove}
+        onTouchMove={handleCanvasMove}
       />
     </div>
   )
