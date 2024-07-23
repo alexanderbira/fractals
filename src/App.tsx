@@ -11,7 +11,7 @@ function App() {
   const [cutoff, setCutoff] = useState(10 ** 2)
   const [maxIterations, setMaxIterations] = useState(250)
 
-  const canvasSize = 500
+  const canvasSize = 400
 
   return (
     <div
@@ -26,7 +26,7 @@ function App() {
         <p>minRe: {minRe}</p>
         <input
           type="range"
-          min={-2}
+          min={-6}
           max={2}
           step={0.0001}
           value={minRe}
@@ -37,7 +37,7 @@ function App() {
         <input
           type="range"
           min={-2}
-          max={2}
+          max={6}
           step={0.0001}
           value={maxIm}
           onChange={(e) => setMaxIm(parseFloat(e.target.value))}
@@ -82,7 +82,7 @@ function App() {
         <input
           type="range"
           min={0}
-          max={1000}
+          max={5000}
           step={1}
           value={maxIterations}
           onChange={(e) => setMaxIterations(parseFloat(e.target.value))}
@@ -94,6 +94,7 @@ function App() {
         maxIm={maxIm}
         setMaxIm={setMaxIm}
         viewSize={viewSize}
+        setViewSize={setViewSize}
         startRe={startRe}
         startIm={startIm}
         cutoff={cutoff}

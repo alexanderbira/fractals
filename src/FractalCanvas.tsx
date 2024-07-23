@@ -9,6 +9,7 @@ import {
   useCallback,
   TouchEvent,
   MouseEvent,
+  WheelEvent,
   Dispatch,
   SetStateAction,
 } from "react"
@@ -19,6 +20,7 @@ interface FractalProps {
   maxIm: number
   setMaxIm: Dispatch<SetStateAction<number>>
   viewSize: number
+  setViewSize: Dispatch<SetStateAction<number>>
   startRe: number
   startIm: number
   cutoff: number
@@ -67,6 +69,7 @@ const FractalCanvas: FC<FractalProps> = ({
   maxIm,
   setMaxIm,
   viewSize,
+  setViewSize,
   startRe,
   startIm,
   cutoff,
@@ -148,7 +151,7 @@ const FractalCanvas: FC<FractalProps> = ({
     module,
   ])
 
-  const handleCanvasMove = useCallback(
+  const handleMove = useCallback(
     (e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>) => {
       if (mouseDown) {
         if (!mousePos) return
@@ -167,7 +170,7 @@ const FractalCanvas: FC<FractalProps> = ({
     [viewSize, canvasSize, setMaxIm, setMinRe, mouseDown, mousePos, savedState],
   )
 
-  const handleStartCanvasMove = useCallback(
+  const handleStartMove = useCallback(
     (e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>) => {
       setMouseDown(true)
       setMousePos(getMousePos(e))
@@ -177,6 +180,39 @@ const FractalCanvas: FC<FractalProps> = ({
       })
     },
     [minRe, maxIm],
+  )
+
+  const handleResize = useCallback(
+    (e: WheelEvent<HTMLCanvasElement>) => {
+      if (!module) return
+
+      let scaleFactor = Math.min(1 + Math.abs(e.deltaY / 1000), 1.1)
+      if (e.deltaY < 0) {
+        scaleFactor = 1 / scaleFactor
+      }
+      const newViewSize = viewSize * scaleFactor
+
+      const mousePos = getMousePos(e)
+
+      const re = minRe + (mousePos.x / canvasSize) * viewSize
+      const im = maxIm - (mousePos.y / canvasSize) * viewSize
+      const newMinRe = re + (minRe - re) * scaleFactor
+      const newMaxIm = im + (maxIm - im) * scaleFactor
+
+      setViewSize(newViewSize)
+      setMinRe(newMinRe)
+      setMaxIm(newMaxIm)
+    },
+    [
+      canvasSize,
+      maxIm,
+      minRe,
+      module,
+      setMaxIm,
+      setMinRe,
+      setViewSize,
+      viewSize,
+    ],
   )
 
   useEffect(() => {
@@ -208,13 +244,14 @@ const FractalCanvas: FC<FractalProps> = ({
         id="canvas"
         className={mouseDown ? "grabbing" : "grab"}
         ref={canvasRef}
-        onTouchStart={handleStartCanvasMove}
-        onMouseDown={handleStartCanvasMove}
+        onTouchStart={handleStartMove}
+        onMouseDown={handleStartMove}
         onTouchEnd={() => setMouseDown(false)}
         onMouseUp={() => setMouseDown(false)}
         onMouseLeave={() => setMouseDown(false)}
-        onMouseMove={handleCanvasMove}
-        onTouchMove={handleCanvasMove}
+        onMouseMove={handleMove}
+        onTouchMove={handleMove}
+        onWheel={handleResize}
       />
     </div>
   )
