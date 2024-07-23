@@ -63,6 +63,11 @@ const getMousePos = (
   return { x, y }
 }
 
+// The time between frames in milliseconds. Here, we're aiming for 30fps.
+const timeBetweenFrames = 1000 / 30
+// The time of the last frame in milliseconds.
+let lastTime = 0
+
 const FractalCanvas: FC<FractalProps> = ({
   minRe,
   setMinRe,
@@ -82,6 +87,10 @@ const FractalCanvas: FC<FractalProps> = ({
   const [savedState, setSavedState] = useState<SavedState | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    lastTime = Date.now()
+  }, []);
 
   const initialise = useCallback(async () => {
     // Initialise the module
@@ -156,6 +165,8 @@ const FractalCanvas: FC<FractalProps> = ({
       if (mouseDown) {
         if (!mousePos) return
         if (!savedState) return
+        if (Date.now() < lastTime + timeBetweenFrames) return
+        lastTime = Date.now()
 
         const newMousePos = getMousePos(e)
         const dx = newMousePos.x - mousePos.x
@@ -165,6 +176,8 @@ const FractalCanvas: FC<FractalProps> = ({
 
         setMinRe(savedState.minRe - dx * scaleFactor)
         setMaxIm(savedState.maxIm + dy * scaleFactor)
+
+
       }
     },
     [viewSize, canvasSize, setMaxIm, setMinRe, mouseDown, mousePos, savedState],
@@ -185,6 +198,9 @@ const FractalCanvas: FC<FractalProps> = ({
   const handleResize = useCallback(
     (e: WheelEvent<HTMLCanvasElement>) => {
       if (!module) return
+
+      if (Date.now() < lastTime + timeBetweenFrames) return
+      lastTime = Date.now()
 
       let scaleFactor = Math.min(1 + Math.abs(e.deltaY / 1000), 1.1)
       if (e.deltaY < 0) {
