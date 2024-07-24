@@ -99,6 +99,7 @@ function App() {
         startIm={startIm}
         cutoff={cutoff}
         maxIterations={maxIterations}
+        setMaxIterations={setMaxIterations}
         canvasSize={canvasSize}
       />
     </div>

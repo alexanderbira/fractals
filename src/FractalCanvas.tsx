@@ -25,6 +25,7 @@ interface FractalProps {
   startIm: number
   cutoff: number
   maxIterations: number
+  setMaxIterations: Dispatch<SetStateAction<number>>
   canvasSize: number
 }
 
@@ -66,6 +67,8 @@ const getMousePos = (e: MouseEvent | TouchEvent): MousePos => {
   return { x, y }
 }
 
+let start: number
+
 const FractalCanvas: FC<FractalProps> = ({
   minRe,
   setMinRe,
@@ -77,6 +80,7 @@ const FractalCanvas: FC<FractalProps> = ({
   startIm,
   cutoff,
   maxIterations,
+  setMaxIterations,
   canvasSize,
 }) => {
   const [module, setModule] = useState<MainModule | null>(null)
@@ -90,6 +94,29 @@ const FractalCanvas: FC<FractalProps> = ({
   const [generating, setGenerating] = useState<boolean>(false)
 
   const canvasRef = useRef(null)
+
+  const startupAnimation = useCallback(
+    (time: number) => {
+      if (!start) start = time
+
+      const elapsed = time - start
+
+      if (!module) return
+      if (elapsed < 500) {
+        setMaxIterations(Math.ceil(elapsed / 5)) // after 500 milliseconds, maxIterations will be 100
+        requestAnimationFrame(startupAnimation)
+      } else {
+        setMaxIterations(100)
+      }
+    },
+    [module, setMaxIterations],
+  )
+
+  useEffect(() => {
+    if (!module) return
+
+    startupAnimation(0)
+  }, [module, startupAnimation])
 
   const initialise = useCallback(async () => {
     // Initialise the module
@@ -176,7 +203,16 @@ const FractalCanvas: FC<FractalProps> = ({
         setMaxIm(savedState.maxIm + dy * scaleFactor)
       }
     },
-    [mouseDown, generating, mousePos, savedState, viewSize, canvasSize, setMinRe, setMaxIm],
+    [
+      mouseDown,
+      generating,
+      mousePos,
+      savedState,
+      viewSize,
+      canvasSize,
+      setMinRe,
+      setMaxIm,
+    ],
   )
 
   const handleStartMove = useCallback(
@@ -217,7 +253,17 @@ const FractalCanvas: FC<FractalProps> = ({
       setMinRe(newMinRe)
       setMaxIm(newMaxIm)
     },
-    [canvasSize, generating, maxIm, minRe, module, setMaxIm, setMinRe, setViewSize, viewSize],
+    [
+      canvasSize,
+      generating,
+      maxIm,
+      minRe,
+      module,
+      setMaxIm,
+      setMinRe,
+      setViewSize,
+      viewSize,
+    ],
   )
 
   const handleTouchMove = useCallback(
@@ -257,7 +303,18 @@ const FractalCanvas: FC<FractalProps> = ({
         setMaxIm(newMaxIm)
       }
     },
-    [canvasSize, generating, handleMove, initialPinchDistance, mousePos, savedState, savedViewSize, setMaxIm, setMinRe, setViewSize],
+    [
+      canvasSize,
+      generating,
+      handleMove,
+      initialPinchDistance,
+      mousePos,
+      savedState,
+      savedViewSize,
+      setMaxIm,
+      setMinRe,
+      setViewSize,
+    ],
   )
 
   const handleTouchStart = useCallback(
