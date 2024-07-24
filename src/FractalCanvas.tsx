@@ -38,9 +38,9 @@ interface SavedState {
   maxIm: number
 }
 
-const getTouchPos = (e: TouchEvent<HTMLCanvasElement>, touchIndex: number) => {
+const getTouchPos = (e: TouchEvent, touchIndex: number) => {
   const touch = e.touches[touchIndex]
-  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+  const rect = (e.target as HTMLElement).getBoundingClientRect()
   return {
     x: touch.clientX - rect.left,
     y: touch.clientY - rect.top,
@@ -48,16 +48,12 @@ const getTouchPos = (e: TouchEvent<HTMLCanvasElement>, touchIndex: number) => {
 }
 
 // Returns true iff the event passed into it was a React MouseEvent.
-const isMouseEvent = (
-  e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>,
-): e is MouseEvent<HTMLCanvasElement> =>
-  (e as MouseEvent<HTMLCanvasElement>).clientX !== undefined
+const isMouseEvent = (e: MouseEvent | TouchEvent): e is MouseEvent =>
+  (e as MouseEvent).clientX !== undefined
 
 // Get the current mouse position relative to the target canvas element.
-const getMousePos = (
-  e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>,
-): MousePos => {
-  const rect = (e.target as HTMLCanvasElement).getBoundingClientRect()
+const getMousePos = (e: MouseEvent | TouchEvent): MousePos => {
+  const rect = (e.target as HTMLElement).getBoundingClientRect()
   let x: number, y: number
 
   if (isMouseEvent(e)) {
@@ -69,11 +65,6 @@ const getMousePos = (
 
   return { x, y }
 }
-
-// The time between frames in milliseconds. Here, we're aiming for 30fps.
-const timeBetweenFrames = 1000 / 30
-// The time of the last frame in milliseconds.
-let lastTime = 0
 
 const FractalCanvas: FC<FractalProps> = ({
   minRe,
@@ -96,12 +87,9 @@ const FractalCanvas: FC<FractalProps> = ({
   const [initialPinchDistance, setInitialPinchDistance] = useState<
     number | null
   >(null)
+  const [generating, setGenerating] = useState<boolean>(false)
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    lastTime = Date.now()
-  }, [])
+  const canvasRef = useRef(null)
 
   const initialise = useCallback(async () => {
     // Initialise the module
@@ -172,12 +160,11 @@ const FractalCanvas: FC<FractalProps> = ({
   ])
 
   const handleMove = useCallback(
-    (e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>) => {
+    (e: MouseEvent | TouchEvent) => {
       if (mouseDown) {
+        if (generating) return
         if (!mousePos) return
         if (!savedState) return
-        if (Date.now() < lastTime + timeBetweenFrames) return
-        lastTime = Date.now()
 
         const newMousePos = getMousePos(e)
         const dx = newMousePos.x - mousePos.x
@@ -189,11 +176,11 @@ const FractalCanvas: FC<FractalProps> = ({
         setMaxIm(savedState.maxIm + dy * scaleFactor)
       }
     },
-    [viewSize, canvasSize, setMaxIm, setMinRe, mouseDown, mousePos, savedState],
+    [mouseDown, generating, mousePos, savedState, viewSize, canvasSize, setMinRe, setMaxIm],
   )
 
   const handleStartMove = useCallback(
-    (e: MouseEvent<HTMLCanvasElement> | TouchEvent<HTMLCanvasElement>) => {
+    (e: MouseEvent | TouchEvent) => {
       setMouseDown(true)
       setMousePos(getMousePos(e))
       setSavedState({
@@ -205,13 +192,12 @@ const FractalCanvas: FC<FractalProps> = ({
   )
 
   const handleResize = useCallback(
-    (e: WheelEvent<HTMLCanvasElement>) => {
+    (e: WheelEvent) => {
       if (!module) return
 
       e.preventDefault()
 
-      if (Date.now() < lastTime + timeBetweenFrames) return
-      lastTime = Date.now()
+      if (generating) return
 
       let scaleFactor = Math.min(1 + Math.abs(e.deltaY / 100), 1.3)
       if (e.deltaY < 0) {
@@ -231,25 +217,15 @@ const FractalCanvas: FC<FractalProps> = ({
       setMinRe(newMinRe)
       setMaxIm(newMaxIm)
     },
-    [
-      canvasSize,
-      maxIm,
-      minRe,
-      module,
-      setMaxIm,
-      setMinRe,
-      setViewSize,
-      viewSize,
-    ],
+    [canvasSize, generating, maxIm, minRe, module, setMaxIm, setMinRe, setViewSize, viewSize],
   )
 
   const handleTouchMove = useCallback(
-    (e: TouchEvent<HTMLCanvasElement>) => {
+    (e: TouchEvent) => {
       if (e.touches.length === 1) {
         handleMove(e)
       } else {
-        if (Date.now() < lastTime + timeBetweenFrames) return
-        lastTime = Date.now()
+        if (generating) return
 
         if (!initialPinchDistance) return
         if (!savedViewSize) return
@@ -281,21 +257,11 @@ const FractalCanvas: FC<FractalProps> = ({
         setMaxIm(newMaxIm)
       }
     },
-    [
-      canvasSize,
-      handleMove,
-      initialPinchDistance,
-      mousePos,
-      savedState,
-      savedViewSize,
-      setMaxIm,
-      setMinRe,
-      setViewSize,
-    ],
+    [canvasSize, generating, handleMove, initialPinchDistance, mousePos, savedState, savedViewSize, setMaxIm, setMinRe, setViewSize],
   )
 
   const handleTouchStart = useCallback(
-    (e: TouchEvent<HTMLCanvasElement>) => {
+    (e: TouchEvent) => {
       if (e.touches.length === 1) {
         handleStartMove(e)
       } else if (e.touches.length === 2) {
@@ -323,7 +289,7 @@ const FractalCanvas: FC<FractalProps> = ({
   )
 
   const handleTouchEnd = useCallback(
-    (e: TouchEvent<HTMLCanvasElement>) => {
+    (e: TouchEvent) => {
       if (e.touches.length > 0) {
         handleTouchStart(e)
       } else {
@@ -336,16 +302,31 @@ const FractalCanvas: FC<FractalProps> = ({
   useEffect(() => {
     if (!module) return
 
-    module._generateRenderFractal(
-      minRe,
-      maxIm,
-      viewSize,
-      startRe,
-      startIm,
-      cutoff,
-      maxIterations,
-    )
-  }, [minRe, maxIm, viewSize, startRe, startIm, cutoff, maxIterations, module])
+    requestAnimationFrame(() => {
+      if (generating) return
+      setGenerating(true)
+      module._generateRenderFractal(
+        minRe,
+        maxIm,
+        viewSize,
+        startRe,
+        startIm,
+        cutoff,
+        maxIterations,
+      )
+      setGenerating(false)
+    })
+  }, [
+    minRe,
+    maxIm,
+    viewSize,
+    startRe,
+    startIm,
+    cutoff,
+    maxIterations,
+    module,
+    generating,
+  ])
 
   return (
     <div>
