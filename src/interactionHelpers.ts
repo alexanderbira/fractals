@@ -5,7 +5,12 @@ export interface MousePos {
   y: number
 }
 
-export const getTouchPos = (e: TouchEvent, touchIndex: number) => {
+/**
+ * Get the position of the touch with a given index relative to the target element.
+ * @param e The touch event from which to get the positions.
+ * @param touchIndex The index of the touch for which to get the position.
+ */
+export const getTouchPos = (e: TouchEvent, touchIndex: number): MousePos => {
   const touch = e.touches[touchIndex]
   const rect = (e.target as HTMLElement).getBoundingClientRect()
   return {
@@ -13,11 +18,19 @@ export const getTouchPos = (e: TouchEvent, touchIndex: number) => {
     y: touch.clientY - rect.top,
   }
 }
-// Returns true iff the event passed into it was a React MouseEvent.
+
+/**
+ * Return true iff the event was a React MouseEvent.
+ * @param e The event to check.
+ */
 const isMouseOrWheelEvent = (
   e: MouseEvent | TouchEvent | WheelEvent,
 ): e is MouseEvent | WheelEvent => (e as MouseEvent).clientX !== undefined
-// Get the current mouse position relative to the target canvas element.
+
+/**
+ * Get the position of the mouse relative to the target element.
+ * @param e The event to check.
+ */
 export const getMousePos = (
   e: MouseEvent | TouchEvent | WheelEvent,
 ): MousePos => {

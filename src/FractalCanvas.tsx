@@ -302,7 +302,7 @@ const FractalCanvas: FC<FractalProps> = ({
   useEffect(() => {
     if (!canvasRef.current) return
 
-    const canvas = canvasRef.current as HTMLCanvasElement
+    const canvas = canvasRef.current as HTMLElement
     canvas.addEventListener("wheel", handleResize, { passive: false })
 
     return () => {
