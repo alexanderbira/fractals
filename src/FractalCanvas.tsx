@@ -1,18 +1,18 @@
-import initModule, { MainModule } from "./lib/a.out"
-
 import {
+  Dispatch,
+  FC,
   Fragment,
+  MouseEvent,
+  SetStateAction,
+  TouchEvent,
+  useCallback,
+  useEffect,
   useRef,
   useState,
-  FC,
-  useEffect,
-  useCallback,
-  TouchEvent,
-  MouseEvent,
-  WheelEvent,
-  Dispatch,
-  SetStateAction,
 } from "react"
+import useStartupAnimation from "./useStartupAnimation.ts"
+import { getMousePos, getTouchPos, MousePos } from "./interactionHelpers.ts"
+import useModule from "./useModule.ts"
 
 interface FractalProps {
   minRe: number
@@ -29,45 +29,10 @@ interface FractalProps {
   canvasSize: number
 }
 
-interface MousePos {
-  x: number
-  y: number
-}
-
-interface SavedState {
+interface ViewboxPos {
   minRe: number
   maxIm: number
 }
-
-const getTouchPos = (e: TouchEvent, touchIndex: number) => {
-  const touch = e.touches[touchIndex]
-  const rect = (e.target as HTMLElement).getBoundingClientRect()
-  return {
-    x: touch.clientX - rect.left,
-    y: touch.clientY - rect.top,
-  }
-}
-
-// Returns true iff the event passed into it was a React MouseEvent.
-const isMouseEvent = (e: MouseEvent | TouchEvent): e is MouseEvent =>
-  (e as MouseEvent).clientX !== undefined
-
-// Get the current mouse position relative to the target canvas element.
-const getMousePos = (e: MouseEvent | TouchEvent): MousePos => {
-  const rect = (e.target as HTMLElement).getBoundingClientRect()
-  let x: number, y: number
-
-  if (isMouseEvent(e)) {
-    x = e.clientX - rect.left
-    y = e.clientY - rect.top
-  } else {
-    return getTouchPos(e, 0)
-  }
-
-  return { x, y }
-}
-
-let start: number
 
 const FractalCanvas: FC<FractalProps> = ({
   minRe,
@@ -83,77 +48,35 @@ const FractalCanvas: FC<FractalProps> = ({
   setMaxIterations,
   canvasSize,
 }) => {
-  const [module, setModule] = useState<MainModule | null>(null)
+  // Whether the mouse is currently down over the canvas
   const [mouseDown, setMouseDown] = useState<boolean>(false)
-  const [mousePos, setMousePos] = useState<MousePos | null>(null)
-  const [savedState, setSavedState] = useState<SavedState | null>(null)
-  const [savedViewSize, setSavedViewSize] = useState<number | null>(null)
-  const [initialPinchDistance, setInitialPinchDistance] = useState<
-    number | null
-  >(null)
+
+  // The mouse position within the canvas at the start of a transformation
+  const [startMousePos, setStartMousePos] = useState<MousePos | null>(null)
+
+  // The position of the viewbox in the fractal at the start of a transformation
+  const [startViewboxPos, setStartViewboxPos] = useState<ViewboxPos | null>(
+    null,
+  )
+
+  // The view size at the start of a transformation
+  const [startViewSize, setStartViewSize] = useState<number | null>(null)
+
+  // The pinch distance at the start of a transformation
+  const [startPinchDistance, setStartPinchDistance] = useState<number | null>(
+    null,
+  )
+
+  // Whether a frame is currently being generated
   const [generating, setGenerating] = useState<boolean>(false)
 
   const canvasRef = useRef(null)
 
-  const startupAnimation = useCallback(
-    (time: number) => {
-      if (!start) start = time
+  const { module, initialiseModule, saveCanvas, saveGeneratedImage } =
+    useModule()
 
-      const elapsed = time - start
-
-      if (!module) return
-      if (elapsed < 500) {
-        setMaxIterations(Math.ceil(elapsed / 5)) // after 500 milliseconds, maxIterations will be 100
-        requestAnimationFrame(startupAnimation)
-      } else {
-        setMaxIterations(100)
-      }
-    },
-    [module, setMaxIterations],
-  )
-
-  useEffect(() => {
-    if (!module) return
-
-    startupAnimation(0)
-  }, [module, startupAnimation])
-
-  const initialise = useCallback(async () => {
-    // Initialise the module
-    const module_ = await initModule({
-      canvas: canvasRef.current,
-    })
-    setModule(module_)
-
-    // Initialise the canvas
-    module_._initialiseGraphics(canvasSize)
-    // The events which Emscripten adds to the window mess with React state management, so remove them
-    module_.JSEvents.removeAllEventListeners()
-  }, [canvasSize])
-
-  const saveCanvas = useCallback(() => {
-    if (!module) return
-
-    // Save the image in the virtual Emscripten file system
-    module._saveImage()
-
-    // Extract the image from the virtual file system and save it
-    const blob = new Blob([module.FS.readFile("image.bmp")], {
-      type: "image/bmp",
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "fractal.bmp"
-    a.click()
-  }, [module])
-
-  const saveCanvasHighRes = useCallback(async () => {
-    if (!module) return
-
-    // Generate and save the fractal to the virtual filesystem
-    console.time()
-    module._generateSaveFractal(
+  const saveCanvasHighRes = useCallback(() => {
+    saveGeneratedImage(
       minRe,
       maxIm,
       viewSize,
@@ -163,18 +86,8 @@ const FractalCanvas: FC<FractalProps> = ({
       maxIterations,
       canvasSize * 5,
     )
-    console.timeEnd()
-
-    // Extract the image from the virtual file system and save it
-    const blob = new Blob([module.FS.readFile("image.bmp")], {
-      type: "image/bmp",
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "fractal.bmp"
-    a.click()
   }, [
+    saveGeneratedImage,
     minRe,
     maxIm,
     viewSize,
@@ -183,31 +96,61 @@ const FractalCanvas: FC<FractalProps> = ({
     cutoff,
     maxIterations,
     canvasSize,
-    module,
   ])
 
-  const handleMove = useCallback(
+  useStartupAnimation(module, setMaxIterations)
+
+  useEffect(() => {
+    if (!module) return
+
+    requestAnimationFrame(() => {
+      if (generating) return
+      setGenerating(true)
+      module._generateRenderFractal(
+        minRe,
+        maxIm,
+        viewSize,
+        startRe,
+        startIm,
+        cutoff,
+        maxIterations,
+      )
+      setGenerating(false)
+    })
+  }, [
+    minRe,
+    maxIm,
+    viewSize,
+    startRe,
+    startIm,
+    cutoff,
+    maxIterations,
+    module,
+    generating,
+  ])
+
+  const handleMouseMove = useCallback(
     (e: MouseEvent | TouchEvent) => {
       if (mouseDown) {
         if (generating) return
-        if (!mousePos) return
-        if (!savedState) return
+        if (!startMousePos) return
+        if (!startViewboxPos) return
 
         const newMousePos = getMousePos(e)
-        const dx = newMousePos.x - mousePos.x
-        const dy = newMousePos.y - mousePos.y
+        const dx = newMousePos.x - startMousePos.x
+        const dy = newMousePos.y - startMousePos.y
 
         const scaleFactor = viewSize / canvasSize
 
-        setMinRe(savedState.minRe - dx * scaleFactor)
-        setMaxIm(savedState.maxIm + dy * scaleFactor)
+        setMinRe(startViewboxPos.minRe - dx * scaleFactor)
+        setMaxIm(startViewboxPos.maxIm + dy * scaleFactor)
       }
     },
     [
       mouseDown,
       generating,
-      mousePos,
-      savedState,
+      startMousePos,
+      startViewboxPos,
       viewSize,
       canvasSize,
       setMinRe,
@@ -215,11 +158,11 @@ const FractalCanvas: FC<FractalProps> = ({
     ],
   )
 
-  const handleStartMove = useCallback(
+  const handleMoveStart = useCallback(
     (e: MouseEvent | TouchEvent) => {
       setMouseDown(true)
-      setMousePos(getMousePos(e))
-      setSavedState({
+      setStartMousePos(getMousePos(e))
+      setStartViewboxPos({
         minRe,
         maxIm,
       })
@@ -269,14 +212,14 @@ const FractalCanvas: FC<FractalProps> = ({
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
       if (e.touches.length === 1) {
-        handleMove(e)
+        handleMouseMove(e)
       } else {
         if (generating) return
 
-        if (!initialPinchDistance) return
-        if (!savedViewSize) return
-        if (!savedState) return
-        if (!mousePos) return
+        if (!startPinchDistance) return
+        if (!startViewSize) return
+        if (!startViewboxPos) return
+        if (!startMousePos) return
 
         const touch1 = e.touches[0]
         const touch2 = e.touches[1]
@@ -284,16 +227,16 @@ const FractalCanvas: FC<FractalProps> = ({
         const dy = touch1.clientY - touch2.clientY
         const distance = Math.sqrt(dx * dx + dy * dy)
 
-        const scaleFactor = initialPinchDistance / distance
-        const newViewSize = savedViewSize * scaleFactor
+        const scaleFactor = startPinchDistance / distance
+        const newViewSize = startViewSize * scaleFactor
 
         const midX = (getTouchPos(e, 0).x + getTouchPos(e, 1).x) / 2
         const midY = (getTouchPos(e, 0).y + getTouchPos(e, 1).y) / 2
 
         const midRe =
-          savedState.minRe + (mousePos.x / canvasSize) * savedViewSize
+          startViewboxPos.minRe + (startMousePos.x / canvasSize) * startViewSize
         const midIm =
-          savedState.maxIm - (mousePos.y / canvasSize) * savedViewSize
+          startViewboxPos.maxIm - (startMousePos.y / canvasSize) * startViewSize
 
         const newMinRe = midRe - (midX / canvasSize) * newViewSize
         const newMaxIm = midIm + (midY / canvasSize) * newViewSize
@@ -306,11 +249,11 @@ const FractalCanvas: FC<FractalProps> = ({
     [
       canvasSize,
       generating,
-      handleMove,
-      initialPinchDistance,
-      mousePos,
-      savedState,
-      savedViewSize,
+      handleMouseMove,
+      startPinchDistance,
+      startMousePos,
+      startViewboxPos,
+      startViewSize,
       setMaxIm,
       setMinRe,
       setViewSize,
@@ -320,7 +263,7 @@ const FractalCanvas: FC<FractalProps> = ({
   const handleTouchStart = useCallback(
     (e: TouchEvent) => {
       if (e.touches.length === 1) {
-        handleStartMove(e)
+        handleMoveStart(e)
       } else if (e.touches.length === 2) {
         const touch1 = e.touches[0]
         const touch2 = e.touches[1]
@@ -333,16 +276,16 @@ const FractalCanvas: FC<FractalProps> = ({
           y: (getTouchPos(e, 0).y + getTouchPos(e, 1).y) / 2,
         }
 
-        setInitialPinchDistance(distance)
-        setMousePos(midpoint)
-        setSavedState({
+        setStartPinchDistance(distance)
+        setStartMousePos(midpoint)
+        setStartViewboxPos({
           minRe,
           maxIm,
         })
-        setSavedViewSize(viewSize)
+        setStartViewSize(viewSize)
       }
     },
-    [handleStartMove, maxIm, minRe, viewSize],
+    [handleMoveStart, maxIm, minRe, viewSize],
   )
 
   const handleTouchEnd = useCallback(
@@ -357,38 +300,22 @@ const FractalCanvas: FC<FractalProps> = ({
   )
 
   useEffect(() => {
-    if (!module) return
+    if (!canvasRef.current) return
 
-    requestAnimationFrame(() => {
-      if (generating) return
-      setGenerating(true)
-      module._generateRenderFractal(
-        minRe,
-        maxIm,
-        viewSize,
-        startRe,
-        startIm,
-        cutoff,
-        maxIterations,
-      )
-      setGenerating(false)
-    })
-  }, [
-    minRe,
-    maxIm,
-    viewSize,
-    startRe,
-    startIm,
-    cutoff,
-    maxIterations,
-    module,
-    generating,
-  ])
+    const canvas = canvasRef.current as HTMLCanvasElement
+    canvas.addEventListener("wheel", handleResize, { passive: false })
+
+    return () => {
+      canvas.removeEventListener("wheel", handleResize)
+    }
+  }, [canvasRef, handleResize])
 
   return (
     <div>
       {!module ? (
-        <button onClick={initialise}>Initialise</button>
+        <button onClick={() => initialiseModule(canvasSize, canvasRef)}>
+          Initialise
+        </button>
       ) : (
         <Fragment>
           <button onClick={saveCanvas}>Save</button>
@@ -401,13 +328,12 @@ const FractalCanvas: FC<FractalProps> = ({
         className={mouseDown ? "grabbing" : "grab"}
         ref={canvasRef}
         onTouchStart={handleTouchStart}
-        onMouseDown={handleStartMove}
+        onMouseDown={handleMoveStart}
         onTouchEnd={handleTouchEnd}
         onMouseUp={() => setMouseDown(false)}
         onMouseLeave={() => setMouseDown(false)}
-        onMouseMove={handleMove}
+        onMouseMove={handleMouseMove}
         onTouchMove={handleTouchMove}
-        onWheel={handleResize}
       />
     </div>
   )
