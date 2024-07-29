@@ -1,4 +1,4 @@
-import { MutableRefObject, useCallback, useState } from "react"
+import { RefObject, useCallback, useState } from "react"
 import initModule, { MainModule } from "./lib/a.out"
 
 /**
@@ -13,7 +13,7 @@ const useModule = () => {
    * @param canvasRef The canvas to use for graphics.
    */
   const initialiseModule = useCallback(
-    async (canvasSize: number, canvasRef: MutableRefObject<null>) => {
+    async (canvasSize: number, canvasRef: RefObject<HTMLCanvasElement>) => {
       // Initialise the module
       const module_ = await initModule({
         canvas: canvasRef.current,
