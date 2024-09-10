@@ -7,6 +7,7 @@ const ANIMATION_DURATION = 500
 // The maximum number of iterations after the animation finishes
 let finalMaxIterations = 100
 
+// The start time of the animation
 let start: number | null = null
 
 /**
@@ -28,7 +29,6 @@ const useStartupAnimation = (
       }
 
       const elapsed = time - start
-      console.log(elapsed)
 
       if (elapsed < ANIMATION_DURATION) {
         // Update the max iterations and run again with another animation frame
@@ -44,17 +44,15 @@ const useStartupAnimation = (
     [setMaxIterations],
   )
 
+  // Run the animation when the module loads
   useEffect(() => {
     if (!module) return
     finalMaxIterations = maxIterations
     setMaxIterations(0)
 
     // Run the animation when the module loads
-    // startupAnimation(document.timeline.currentTime!)
     requestAnimationFrame(startupAnimation)
   }, [module])
 }
 
 export default useStartupAnimation
-
-// TODO: the animation doesn't start until part-way into the elapsed time figure out why

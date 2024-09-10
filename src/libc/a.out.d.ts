@@ -189,12 +189,6 @@ declare namespace RuntimeExports {
       canRead: any,
       canWrite: any,
     ): any
-    export function absolutePath(): void
-    export function createFolder(): void
-    export function createLink(): void
-    export function joinPath(): void
-    export function mmapAlloc(): void
-    export function standardizePath(): void
   }
   namespace JSEvents {
     function removeAllEventListeners(): void
@@ -253,10 +247,10 @@ declare namespace RuntimeExports {
   let addRunDependency: any
   let removeRunDependency: any
 }
-declare class ErrnoError extends Error {
+declare class ErrnoError {
   constructor(errno: any)
+  name: string
   errno: any
-  code: string
 }
 declare class FSStream {
   shared: {}

@@ -2,6 +2,7 @@ import "./App.css"
 import FractalCanvas from "./FractalCanvas.tsx"
 import { useCallback, useState } from "react"
 import { Mode } from "./lib/types.ts"
+import CircleSelector from "./components/CircleSelector.tsx"
 
 /**
  * Get a search parameter from the URL or return a default value.
@@ -24,7 +25,9 @@ function App() {
   const [maxIterations, setMaxIterations] = useState(
     searchParamOrDefault("maxIterations", 250),
   )
-  const [mode, setMode] = useState(Mode.MANDELBROT)
+  const [mode, setMode] = useState(
+    searchParamOrDefault("mode", Mode.MANDELBROT),
+  )
 
   const canvasSize = 400
 
@@ -86,23 +89,16 @@ function App() {
           value={viewSize}
           onChange={(e) => setViewSize(parseFloat(e.target.value))}
         />
-        <p>startRe: {startRe}</p>
-        <input
-          type="range"
-          min={-2}
-          max={2}
-          step={0.0001}
-          value={startRe}
-          onChange={(e) => setStartRe(parseFloat(e.target.value))}
-        />
-        <p>startIm: {startIm}</p>
-        <input
-          type="range"
-          min={-2}
-          max={2}
-          step={0.0001}
-          value={startIm}
-          onChange={(e) => setStartIm(parseFloat(e.target.value))}
+        <p>
+          complex point: {startRe} {startIm < 0 ? "-" : "+"} {Math.abs(startIm)}
+          i
+        </p>
+        <CircleSelector
+          startRe={startRe}
+          setStartRe={setStartRe}
+          startIm={startIm}
+          setStartIm={setStartIm}
+          mode={mode}
         />
         <p>cutoff: {cutoff}</p>
         <input

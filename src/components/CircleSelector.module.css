@@ -1,0 +1,27 @@
+.CircleSelector {
+  width: 200px;
+  height: 200px;
+  background: white;
+  border-radius: 50%;
+  position: relative;
+  display: inline-block;
+  touch-action: none;
+}
+
+.point {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: black;
+  position: absolute;
+  transform: translate(-5px, -5px);
+}
+
+.mandelbrotBackground {
+  background-image: url("/mandelbrot.png");
+  background-size: cover;
+}
+
+.mandelbrotBackground .point {
+  background-color: white;
+}

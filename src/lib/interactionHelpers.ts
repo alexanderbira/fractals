@@ -23,7 +23,7 @@ export const getTouchPos = (e: TouchEvent, touchIndex: number): MousePos => {
  * Return true iff the event was a React MouseEvent.
  * @param e The event to check.
  */
-const isMouseOrWheelEvent = (
+export const isMouseOrWheelEvent = (
   e: MouseEvent | TouchEvent | WheelEvent,
 ): e is MouseEvent | WheelEvent => (e as MouseEvent).clientX !== undefined
 
