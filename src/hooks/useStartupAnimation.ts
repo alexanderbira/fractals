@@ -1,59 +1,60 @@
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from "react"
-import { MainModule } from "./lib/a.out"
+import { Dispatch, SetStateAction, useCallback, useEffect } from "react"
+import { MainModule } from "../libc/a.out"
 
 // The duration of the animation in milliseconds
 const ANIMATION_DURATION = 500
 
-// The value of the maximum number of iterations after the animation finishes
-const FINAL_MAX_ITERATIONS = 100
+// The maximum number of iterations after the animation finishes
+let finalMaxIterations = 100
+
+let start: number | null = null
 
 /**
  * A hook used to add an animation to the canvas associated with a module when it first loads.
  * @param module The module whose canvas to animate.
  * @param setMaxIterations The function to set the max iterations of the fractal.
+ * @param maxIterations The maximum number of iterations after the animation finishes.
  */
 const useStartupAnimation = (
   module: MainModule | null,
   setMaxIterations: Dispatch<SetStateAction<number>>,
+  maxIterations: number,
 ) => {
-  // The start time of the animation
-  const [start, setStart] = useState(0)
-
   const startupAnimation = useCallback(
     (time: number) => {
-      if (!module) return
-
       // Set the start time of the animation to now if it hasn't been set
-      if (!start) setStart(time)
+      if (start === null) {
+        start = time
+      }
 
       const elapsed = time - start
+      console.log(elapsed)
 
       if (elapsed < ANIMATION_DURATION) {
         // Update the max iterations and run again with another animation frame
         setMaxIterations(
-          Math.ceil(elapsed / (ANIMATION_DURATION / FINAL_MAX_ITERATIONS)),
+          Math.ceil(elapsed / (ANIMATION_DURATION / finalMaxIterations)),
         )
         requestAnimationFrame(startupAnimation)
       } else {
         // Make sure the max iterations always ends at its final value
-        setMaxIterations(FINAL_MAX_ITERATIONS)
+        setMaxIterations(finalMaxIterations)
       }
     },
-    [module, setMaxIterations, start],
+    [setMaxIterations],
   )
 
   useEffect(() => {
     if (!module) return
+    finalMaxIterations = maxIterations
+    setMaxIterations(0)
 
     // Run the animation when the module loads
-    startupAnimation(0)
-  }, [module, startupAnimation])
+    // startupAnimation(document.timeline.currentTime!)
+    requestAnimationFrame(startupAnimation)
+  }, [module])
 }
 
 export default useStartupAnimation
+
+// TODO: the animation doesn't start until part-way into the elapsed time figure out why

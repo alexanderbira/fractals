@@ -1,5 +1,5 @@
 import { RefObject, useCallback, useState } from "react"
-import initModule, { MainModule } from "./lib/a.out"
+import initModule, { MainModule } from "../libc/a.out"
 
 /**
  * A hook used for interacting with a WASM module.
@@ -61,6 +61,7 @@ const useModule = () => {
       startIm: number,
       cutoff: number,
       maxIterations: number,
+      mode: number,
       canvasSize: number,
     ) => {
       if (!module) return
@@ -75,6 +76,7 @@ const useModule = () => {
         startIm,
         cutoff,
         maxIterations,
+        mode,
         canvasSize,
       )
       console.timeEnd()

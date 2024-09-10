@@ -10,9 +10,9 @@ import {
   useRef,
   useState,
 } from "react"
-import useStartupAnimation from "./useStartupAnimation.ts"
-import { getMousePos, getTouchPos, MousePos } from "./interactionHelpers.ts"
-import useModule from "./useModule.ts"
+import useStartupAnimation from "./hooks/useStartupAnimation.ts"
+import { getMousePos, getTouchPos, MousePos } from "./lib/interactionHelpers.ts"
+import useModule from "./hooks/useModule.ts"
 
 interface FractalProps {
   minRe: number
@@ -26,6 +26,7 @@ interface FractalProps {
   cutoff: number
   maxIterations: number
   setMaxIterations: Dispatch<SetStateAction<number>>
+  mode: number
   canvasSize: number
 }
 
@@ -46,6 +47,7 @@ const FractalCanvas: FC<FractalProps> = ({
   cutoff,
   maxIterations,
   setMaxIterations,
+  mode,
   canvasSize,
 }) => {
   // Whether the mouse is currently down over the canvas
@@ -89,6 +91,7 @@ const FractalCanvas: FC<FractalProps> = ({
       startIm,
       cutoff,
       maxIterations,
+      mode,
       canvasSize * 5,
     )
   }, [
@@ -101,10 +104,11 @@ const FractalCanvas: FC<FractalProps> = ({
     cutoff,
     maxIterations,
     canvasSize,
+    mode,
   ])
 
   // Add an animation to the canvas when it loads
-  useStartupAnimation(module, setMaxIterations)
+  useStartupAnimation(module, setMaxIterations, maxIterations)
 
   // Redraw the fractal whenever one of its generation parameters changes
   useEffect(() => {
@@ -121,6 +125,7 @@ const FractalCanvas: FC<FractalProps> = ({
         startIm,
         cutoff,
         maxIterations,
+        mode,
       )
       setGenerating(false)
     })
@@ -134,6 +139,7 @@ const FractalCanvas: FC<FractalProps> = ({
     maxIterations,
     module,
     generating,
+    mode,
   ])
 
   /**

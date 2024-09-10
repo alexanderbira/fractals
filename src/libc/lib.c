@@ -11,6 +11,11 @@
 #define TWO_THIRDS 0.6666666666666666
 #define ONE_THIRD 0.3333333333333333
 
+typedef enum mode {
+    MANDELBROT,
+    JULIA
+} Mode;
+
 /// The width/height of the canvas.
 uint16_t canvasSize;
 
@@ -118,6 +123,7 @@ void writePixel(float h, float s, float l, uint16_t x, uint16_t y) {
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
+/// @param mode The fractal generation mode.
 void calculateMandelbrotPixel(
   uint16_t x,
   uint16_t y,
@@ -127,14 +133,30 @@ void calculateMandelbrotPixel(
   double startRe,
   double startIm,
   double cutoff,
-  int maxIterations
+  int maxIterations,
+  Mode mode
 ) {
   const double scale = viewSize / canvasSize;
 
-  double iterationRe = startRe;
-  double iterationIm = startIm;
-  double cRe = minRe + ((x + 0.5) * scale);
-  double cIm = maxIm - ((y + 0.5) * scale);
+  double cRe;
+  double cIm;
+  double iterationRe;
+  double iterationIm;
+
+  switch (mode) {
+    case JULIA:
+      cRe = startRe;
+      cIm = startIm;
+      iterationRe = minRe + ((x + 0.5) * scale);
+      iterationIm = maxIm - ((y + 0.5) * scale);
+      break;
+    default: // also handles MANDELBROT case
+      iterationRe = startRe;
+      iterationIm = startIm;
+      cRe = minRe + ((x + 0.5) * scale);
+      cIm = maxIm - ((y + 0.5) * scale);
+      break;
+  }
 
   int numIterations = 0;
 
@@ -194,6 +216,7 @@ __attribute__((unused)) void saveImage() {
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
+/// @param mode The fractal generation mode.
 /// @param render Whether to display the calculated canvas on the screen.
 void generateFractal(
   double minRe,
@@ -203,6 +226,7 @@ void generateFractal(
   double startIm,
   double cutoff,
   int maxIterations,
+  Mode mode,
   bool render
 ) {
   for (uint16_t x = 0; x < canvasSize; x++) {
@@ -216,7 +240,8 @@ void generateFractal(
         startRe,
         startIm,
         cutoff,
-        maxIterations
+        maxIterations,
+        mode
       );
     }
     if (render) {
@@ -233,6 +258,7 @@ void generateFractal(
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
+/// @param mode The fractal generation mode.
 __attribute__((unused)) void generateRenderFractal(
   double minRe,
   double maxIm,
@@ -240,7 +266,8 @@ __attribute__((unused)) void generateRenderFractal(
   double startRe,
   double startIm,
   double cutoff,
-  int maxIterations
+  int maxIterations,
+  Mode mode
 ) {
   generateFractal(
     minRe,
@@ -250,6 +277,7 @@ __attribute__((unused)) void generateRenderFractal(
     startIm,
     cutoff,
     maxIterations,
+    mode,
     true
   );
 }
@@ -262,6 +290,7 @@ __attribute__((unused)) void generateRenderFractal(
 /// @param startIm Im(z_0)
 /// @param cutoff The distance from the origin at which a point should stop being iterated.
 /// @param maxIterations The maximum number of iterations of a point to consider.
+/// @param mode The fractal generation mode.
 /// @param canvasSize_ The width/height in pixels of the fractal to generate.
 __attribute__((unused)) void generateSaveFractal(
   double minRe,
@@ -271,6 +300,7 @@ __attribute__((unused)) void generateSaveFractal(
   double startIm,
   double cutoff,
   int maxIterations,
+  Mode mode,
   uint16_t canvasSize_
 ) {
   // Save old global variables
@@ -290,6 +320,7 @@ __attribute__((unused)) void generateSaveFractal(
     startIm,
     cutoff,
     maxIterations,
+    mode,
     false
   );
 

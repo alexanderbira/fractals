@@ -24,6 +24,6 @@ dist-ssr
 *.sw?
 
 # WASM
-src/lib/a.out.js
-src/lib/a.out.wasm
-src/lib/cmake-build-debug
+src/libc/a.out.js
+src/libc/a.out.wasm
+src/libc/cmake-build-debug
