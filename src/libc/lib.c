@@ -1,9 +1,11 @@
 #include <SDL2/SDL.h>
 #include <math.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 #endif
 
 // Constants for the hue2rgb function
@@ -11,10 +13,26 @@
 #define TWO_THIRDS 0.6666666666666666
 #define ONE_THIRD 0.3333333333333333
 
+// Number of threads to use for rendering.
+#define NUM_THREADS 11
+
 typedef enum mode {
     MANDELBROT,
     JULIA
 } Mode;
+
+typedef struct {
+  double minRe;
+  double maxIm;
+  double viewSize;
+  double startRe;
+  double startIm;
+  double cutoff;
+  int maxIterations;
+  Mode mode;
+  uint16_t startX;
+  uint16_t endX;
+} ThreadData;
 
 /// The width/height of the canvas.
 uint16_t canvasSize;
@@ -25,6 +43,11 @@ SDL_Window *window;
 SDL_Renderer *renderer;
 /// An array of 8-bit integers. Each group of 3 integers represents the RGB values of a single pixel on the screen.
 uint8_t *pixels;
+
+#ifdef __EMSCRIPTEN__
+/// Global variable for the WebGL context.
+EMSCRIPTEN_WEBGL_CONTEXT_HANDLE context;
+#endif
 
 /// Redraw a region on the canvas, using data from the pixels array.
 /// @param x1 The x-value of the first point in the region.
@@ -208,6 +231,32 @@ __attribute__((unused)) void saveImage() {
   SDL_FreeSurface(image);
 }
 
+/**
+ * Generate a thread to calculate the fractal.
+ * @param arg The thread data.
+ * @return NULL
+ */
+void* generateFractalThread(void* arg) {
+  ThreadData* data = (ThreadData*)arg;
+  for (uint16_t x = data->startX; x < data->endX; x++) {
+    for (uint16_t y = 0; y < canvasSize; y++) {
+      calculateMandelbrotPixel(
+        x,
+        y,
+        data->minRe,
+        data->maxIm,
+        data->viewSize,
+        data->startRe,
+        data->startIm,
+        data->cutoff,
+        data->maxIterations,
+        data->mode
+      );
+    }
+  }
+  return NULL;
+}
+
 /// Generate a fractal and save it to the pixels array.
 /// @param minRe The real number corresponding to the left border of the render box.
 /// @param maxIm The imaginary number corresponding to the top border of the render box.
@@ -229,24 +278,32 @@ void generateFractal(
   Mode mode,
   bool render
 ) {
-  for (uint16_t x = 0; x < canvasSize; x++) {
-    for (uint16_t y = 0; y < canvasSize; y++) {
-      calculateMandelbrotPixel(
-        x,
-        y,
-        minRe,
-        maxIm,
-        viewSize,
-        startRe,
-        startIm,
-        cutoff,
-        maxIterations,
-        mode
-      );
-    }
-    if (render) {
-      redraw(x, 0, x, canvasSize);
-    }
+  pthread_t threads[NUM_THREADS];
+  ThreadData threadData[NUM_THREADS];
+  uint16_t chunkSize = canvasSize / NUM_THREADS;
+
+  for (int i = 0; i < NUM_THREADS; i++) {
+    threadData[i] = (ThreadData){
+      .minRe = minRe,
+      .maxIm = maxIm,
+      .viewSize = viewSize,
+      .startRe = startRe,
+      .startIm = startIm,
+      .cutoff = cutoff,
+      .maxIterations = maxIterations,
+      .mode = mode,
+      .startX = i * chunkSize,
+      .endX = (i == NUM_THREADS - 1) ? canvasSize : (i + 1) * chunkSize
+    };
+    pthread_create(&threads[i], NULL, generateFractalThread, &threadData[i]);
+  }
+
+  for (int i = 0; i < NUM_THREADS; i++) {
+    pthread_join(threads[i], NULL);
+  }
+
+  if (render) {
+    redraw(0, 0, canvasSize - 1, canvasSize - 1);
   }
 }
 
@@ -338,6 +395,22 @@ __attribute__((unused)) void generateSaveFractal(
 /// Initialise the window, renderer, and pixels array.
 /// @param canvasSize_ The width and height in pixels of the canvas.
 __attribute__((unused)) void initialiseGraphics(uint16_t canvasSize_) {
+  // Initialise WebGL context
+#ifdef __EMSCRIPTEN__
+  EmscriptenWebGLContextAttributes attr;
+  emscripten_webgl_init_context_attributes(&attr);
+  context = emscripten_webgl_create_context("#canvas", &attr);
+
+  if (context <= 0) {
+    printf("Failed to create WebGL context\n");
+    return;
+  }
+
+  emscripten_webgl_make_context_current(context);
+  printf("WebGL context created and made current\n");
+#endif
+
+  // Initialise SDL
   SDL_Init(SDL_INIT_VIDEO);
 
   canvasSize = canvasSize_;

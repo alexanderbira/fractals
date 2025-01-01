@@ -29,7 +29,7 @@ function App() {
     searchParamOrDefault("mode", Mode.MANDELBROT),
   )
 
-  const canvasSize = 400
+  const canvasSize = 500
 
   /**
    * Export the current generation parameters to the URL.
